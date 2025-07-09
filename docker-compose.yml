@@ -1,0 +1,8 @@
+
+services:
+  telegram-bot:
+    build: .
+    container_name: ai-prompt-bot
+    env_file:
+      - .env
+    restart: always
