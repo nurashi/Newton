@@ -6,3 +6,21 @@ services:
     env_file:
       - .env
     restart: always
+
+    depends_on:
+      - postgres
+    
+  postgres:
+    image: postgres:17
+    container_name: open-router-project-postgres
+    environment:
+      POSTGRES_USER: aiuser
+      POSTGRES_PASSWORD: aipassword
+      POSTGRES_DB: aibot
+    ports: 
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

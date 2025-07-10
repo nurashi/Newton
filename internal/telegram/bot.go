@@ -4,7 +4,7 @@ import (
 	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/nurashi/internal/ai"
+	"github.com/nurashi/OpenRouterProject/internal/ai"
 )
 
 func RunTelegramBot() {

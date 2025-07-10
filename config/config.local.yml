@@ -1,0 +1,13 @@
+server:
+  telegram_worker: true
+
+openrouter:
+  model: "mistralai/mistral-7b-instruct:free"
+  referer: "https://github.com/nurashi/OpenRouterProject"
+
+database:
+  host: "postgres"
+  port: 5432
+  user: "aiuser"
+  password: "aipassword"
+  name: "aibot"
