@@ -34,7 +34,7 @@ var App Config
 
 func Load(path string) {
 	viper.SetConfigName(path)
-	viper.SetConfigType("yaml")
+	viper.SetConfigType("yaml") // yaml -> language | .yml - type of file 
 	viper.AddConfigPath("./config")
 
 	viper.AutomaticEnv()
