@@ -15,8 +15,6 @@ services:
       POSTGRES_USER: aiuser
       POSTGRES_PASSWORD: aipassword
       POSTGRES_DB: aibot
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
