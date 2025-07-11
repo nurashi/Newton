@@ -7,7 +7,6 @@ on:
 
 jobs:
   deploy:
-    if: false # enable when runner is ready
     name: Build and Deploy Docker Compose
     runs-on: [self-hosted, abzy-server]
 
