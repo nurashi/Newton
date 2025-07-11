@@ -1,9 +1,8 @@
-version: '3.8'
+name: open-router
 
 services:
   telegram-bot:
     build: .
-    container_name: ai-prompt-bot
     env_file:
       - .env
     restart: always
@@ -12,7 +11,6 @@ services:
 
   postgres:
     image: postgres:17
-    container_name: open-router-project-postgres
     environment:
       POSTGRES_USER: aiuser
       POSTGRES_PASSWORD: aipassword
@@ -24,4 +22,3 @@ services:
 
 volumes:
   postgres_data:
-  
