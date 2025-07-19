@@ -40,7 +40,6 @@ func RunTelegramBot() {
 
 		ctx := context.Background()
 
-		// Send "Thinking..." message
 		msg := tgbotapi.NewMessage(chatID, "Thinking...")
 		sent, err := bot.Send(msg)
 		if err != nil {
@@ -48,14 +47,14 @@ func RunTelegramBot() {
 			continue
 		}
 
-		// Load last 5 messages
+		// load last 5 messages
 		history, err := repo.GetLastMessages(ctx, chatID, 5)
 		if err != nil {
 			log.Printf("Failed to load history for chat %d: %v", chatID, err)
 			history = []*models.Message{}
 		}
 
-		// Build context messages
+		// context messages
 		var contextMessages []ai.Message
 		for i := len(history) - 1; i >= 0; i-- { // reverse order so older messages come first
 			contextMessages = append(contextMessages, ai.Message{
@@ -64,13 +63,12 @@ func RunTelegramBot() {
 			})
 		}
 
-		// Add new user message
+		// new user message adding
 		contextMessages = append(contextMessages, ai.Message{
 			Role:    "user",
 			Content: prompt,
 		})
 
-		// Get AI response
 		response, err := ai.AskWithHistory(contextMessages)
 		if err != nil {
 			response = "ERROR: " + err.Error()
@@ -100,10 +98,9 @@ func RunTelegramBot() {
 		if err := repo.SaveMessage(ctx, aiMsg); err != nil {
 			log.Printf("ERROR: Failed to save AI message for chat %d: %v", chatID, err)
 		} else {
-			log.Printf("Successfully saved AI message for chat %d", chatID)
+			log.Printf("Succesfully saved AI message for chat %d", chatID)
 		}
 
-		// Update the telegram message
 		edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, response)
 		if _, err := bot.Send(edit); err != nil {
 			log.Printf("Failed to edit message: %v", err)

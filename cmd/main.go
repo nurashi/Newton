@@ -10,8 +10,11 @@ import (
 )
 
 func main() {
-	_ = godotenv.Load()
+	err := godotenv.Load()
 
+	if err != nil { 
+		log.Printf("FATAL: .env is not set: %v", err)
+	}
 	config.Load("config.local")
 
 	if err := db.Connect(); err != nil {
