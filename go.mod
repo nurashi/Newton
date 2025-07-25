@@ -1,4 +1,4 @@
-module github.com/nurashi/OpenRouterProject
+module github.com/nurashi/Newton
 
 go 1.24.4
 

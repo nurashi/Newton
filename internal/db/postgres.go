@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/nurashi/OpenRouterProject/internal/config"
+	"github.com/nurashi/Newton/internal/config"
 )
 
 
