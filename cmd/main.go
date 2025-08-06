@@ -4,17 +4,14 @@ import (
 	"log"
 	"os"
 
-	// "github.com/joho/godotenv"
 	"github.com/nurashi/Newton/internal/config"
 	"github.com/nurashi/Newton/internal/database"
+	"github.com/nurashi/Newton/internal/repository"
 	"github.com/nurashi/Newton/internal/telegram"
+	"github.com/nurashi/Newton/migration"
 )
 
 func main() {
-	// if err := godotenv.Load(); err != nil {
-	// 	log.Printf("FATAL: failed to read .env: %v", err)
-	// }
-
 	cfg := config.Load("config")
 	if cfg == nil {
 		log.Fatal("FATAL: failed to load config")
@@ -31,10 +28,16 @@ func main() {
 
 	log.Println("SUCCESSFULLY CONNECTED TO POSTGRES")
 
+	if err := migration.RunMigrations(dbpool); err != nil {
+		log.Printf("WARNING: failed to run migrations: %v", err)
+	}
+
+	userService := repository.NewUserRepository(dbpool)
+
 	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 	if botToken == "" {
 		log.Fatal("FATAL: TELEGRAM_BOT_TOKEN not set in .env or environment")
 	}
 
-	telegram.RunTelegramBot()
+	telegram.RunTelegramBot(userService)
 }

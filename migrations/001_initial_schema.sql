@@ -1,18 +1,14 @@
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    telegram_id BIGINT UNIQUE NOT NULL,
-    username VARCHAR(255),
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT PRIMARY KEY,  
+    username VARCHAR(255),  
     first_name VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    last_name VARCHAR(255),  
+    is_bot BOOLEAN DEFAULT FALSE,
+    language_code VARCHAR(10),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE messages (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    role VARCHAR(20) NOT NULL, 
-    content TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_messages_user_id ON messages(user_id);
-CREATE INDEX idx_messages_created_at ON messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_last_seen ON users(last_seen);
