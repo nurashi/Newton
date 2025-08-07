@@ -117,11 +117,11 @@ Just send me any message and I'll respond using AI!`, firstName)
 		b.sendMessage(chatID, welcomeMsg)
 
 	case "help":
-		b.handleCommand(message) // Reuse start logic
+		b.handleCommand(message) 
 
 	case "clear":
 		delete(b.userHistory, chatID)
-		b.sendMessage(chatID, "Conversation history cleared! 🗑️")
+		b.sendMessage(chatID, "Conversation history cleared!")
 
 	case "profile":
 		b.handleProfileCommand(chatID, int64(userID))
@@ -194,38 +194,31 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message) {
 	userID := message.From.ID
 	prompt := message.Text
 
-	// Update last seen
 	ctx := context.Background()
 	b.userRepo.UpdateLastSeen(ctx, int64(userID))
 
-	// Log user interaction
 	log.Printf("User %d (%s) in chat %d: %s",
 		userID, message.From.UserName, chatID, prompt)
 
-	// Send "typing" status
 	typing := tgbotapi.NewChatAction(chatID, tgbotapi.ChatTyping)
 	b.api.Send(typing)
 
-	// Send initial "thinking" message
-	thinkingMsg := tgbotapi.NewMessage(chatID, "🤔 Thinking...")
+	thinkingMsg := tgbotapi.NewMessage(chatID, "Thinking...")
 	sent, err := b.api.Send(thinkingMsg)
 	if err != nil {
 		log.Printf("Failed to send thinking message: %v", err)
 		return
 	}
 
-	// Add user message to history
 	b.userHistory[chatID] = append(b.userHistory[chatID], ai.Message{
 		Role:    "user",
 		Content: prompt,
 	})
 
-	// Limit history to last 20 messages
 	if len(b.userHistory[chatID]) > 20 {
 		b.userHistory[chatID] = b.userHistory[chatID][len(b.userHistory[chatID])-20:]
 	}
 
-	// Get AI response
 	start := time.Now()
 	response, err := ai.AskWithHistory(b.userHistory[chatID])
 	duration := time.Since(start)
@@ -234,7 +227,6 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message) {
 		log.Printf("AI request failed: %v", err)
 		response = "Sorry, I'm having trouble processing your request. Please try again later."
 
-		// Remove the user message from history on failure
 		if len(b.userHistory[chatID]) > 0 {
 			b.userHistory[chatID] = b.userHistory[chatID][:len(b.userHistory[chatID])-1]
 		}
@@ -248,13 +240,11 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message) {
 		log.Printf("AI responded in %v for user %d", duration, userID)
 	}
 
-	// Edit the "thinking" message with the actual response
 	edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, response)
 	edit.ParseMode = tgbotapi.ModeMarkdown
 
 	if _, err := b.api.Send(edit); err != nil {
 		log.Printf("Failed to edit message: %v", err)
-		// Fallback: send as new message
 		b.sendMessage(chatID, response)
 	}
 }
