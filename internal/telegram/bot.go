@@ -59,14 +59,12 @@ func (b *Bot) handleUpdate(update tgbotapi.Update) {
 		return
 	}
 
-	// Save or update user in database
 	ctx := context.Background()
 	telegramUser := b.extractTelegramUser(update.Message.From)
 
 	user, err := b.userRepo.CreateOrUpdate(ctx, telegramUser)
 	if err != nil {
 		log.Printf("Failed to save user %d: %v", update.Message.From.ID, err)
-		// Continue processing even if user save fails
 	} else {
 		log.Printf("User saved/updated: ID=%d, Username=%s, FirstName=%s",
 			user.ID,
@@ -74,7 +72,6 @@ func (b *Bot) handleUpdate(update tgbotapi.Update) {
 			user.FirstName)
 	}
 
-	// Handle different message types
 	switch {
 	case update.Message.IsCommand():
 		b.handleCommand(update.Message)
@@ -89,13 +86,11 @@ func (b *Bot) handleCommand(message *tgbotapi.Message) {
 	chatID := message.Chat.ID
 	userID := message.From.ID
 
-	// Update last seen
 	ctx := context.Background()
 	b.userRepo.UpdateLastSeen(ctx, int64(userID))
 
 	switch message.Command() {
 	case "start":
-		// Get user info for personalized welcome
 		user, err := b.userRepo.GetByID(ctx, int64(userID))
 		var firstName string
 		if err == nil {
@@ -154,7 +149,7 @@ Member since: %s
 Last seen: %s`,
 		user.ID,
 		user.FirstName,
-		b.stringPtrToString(&user.LastName),
+		b.stringPtrToString(user.LastName),
 		b.stringPtrToString(user.Username),
 		b.stringPtrToString(user.LanguageCode),
 		user.CreatedAt.Format("2006-01-02"),
@@ -177,11 +172,11 @@ func (b *Bot) handleStatsCommand(chatID, userID int64) {
 
 	statsMsg := fmt.Sprintf(`Your Statistics
 
-Messages in current session: %d
-Member since: %s
-Last seen: %s
+	Messages in current session: %d
+	Member since: %s
+	Last seen: %s
 
-More detailed statistics coming soon!`,
+	More detailed statistics coming soon!`,
 		count,
 		stats["member_since"],
 		stats["last_seen"])
@@ -231,7 +226,6 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message) {
 			b.userHistory[chatID] = b.userHistory[chatID][:len(b.userHistory[chatID])-1]
 		}
 	} else {
-		// Add AI response to history
 		b.userHistory[chatID] = append(b.userHistory[chatID], ai.Message{
 			Role:    "assistant",
 			Content: response,

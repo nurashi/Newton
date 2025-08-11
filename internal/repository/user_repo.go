@@ -67,7 +67,7 @@ func (r *UserRepository) GetByID(ctx context.Context, userID int64) (*models.Use
 		SELECT id, username, first_name, last_name, is_bot, language_code, created_at, updated_at, last_seen
 		FROM users 
 		WHERE id = $1`
-	
+	 
 	err := r.db.QueryRow(ctx, query, userID).Scan(
 		&user.ID,
 		&user.Username,
