@@ -5,17 +5,19 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/nurashi/Newton/internal/ai"
+	"github.com/nurashi/Newton/internal/handlers"
 	"github.com/nurashi/Newton/internal/models"
 	"github.com/nurashi/Newton/internal/repository"
 )
 
 type Bot struct {
 	api         *tgbotapi.BotAPI
-	userRepo *repository.UserRepository
+	userRepo    *repository.UserRepository
 	userHistory map[int64][]ai.Message
 }
 
@@ -34,7 +36,7 @@ func NewBot(userRepo *repository.UserRepository) (*Bot, error) {
 
 	return &Bot{
 		api:         api,
-		userRepo: userRepo,
+		userRepo:    userRepo,
 		userHistory: make(map[int64][]ai.Message),
 	}, nil
 }
@@ -112,7 +114,7 @@ Just send me any message and I'll respond using AI!`, firstName)
 		b.sendMessage(chatID, welcomeMsg)
 
 	case "help":
-		b.handleCommand(message) 
+		b.handleCommand(message)
 
 	case "clear":
 		delete(b.userHistory, chatID)
@@ -123,16 +125,31 @@ Just send me any message and I'll respond using AI!`, firstName)
 
 	case "stats":
 		b.handleStatsCommand(chatID, int64(userID))
+	case "weather":
+		args := message.CommandArguments()
+		if args == "" {
+			b.sendMessage(chatID, "Please provide a city name. Example: /weather London")
+			return
+		}
 
+		weatherInfo, err := handlers.GetWeather(args)
+		if err != nil {
+			log.Printf("Weather API error: %v", err)
+			b.sendMessage(chatID, "Sorry, I couldn't fetch the weather right now.")
+			return
+		}
+
+		b.sendMessage(chatID, weatherInfo)
 	default:
 		b.sendMessage(chatID, "Unknown command. Use /help to see available commands.")
 	}
 }
 
 func (b *Bot) handleProfileCommand(chatID, userID int64) {
+	log.Printf("DEBUG: handleProfileCommand called for chatID=%d userID=%d", chatID, userID)
 	ctx := context.Background()
 	user, err := b.userRepo.GetByID(ctx, userID)
-
+	log.Printf("DEBUG: user from DB: %+v", user)
 	if err != nil {
 		log.Printf("Failed to get user profile %d: %v", userID, err)
 		b.sendMessage(chatID, "Sorry, couldn't retrieve your profile information.")
@@ -148,14 +165,16 @@ Language: %s
 Member since: %s
 Last seen: %s`,
 		user.ID,
-		user.FirstName,
-		b.stringPtrToString(user.LastName),
-		b.stringPtrToString(user.Username),
-		b.stringPtrToString(user.LanguageCode),
+		escapeMarkdownV2(user.FirstName),
+		escapeMarkdownV2(b.stringPtrToString(user.LastName)),
+		escapeMarkdownV2(b.stringPtrToString(user.Username)),
+		escapeMarkdownV2(b.stringPtrToString(user.LanguageCode)),
 		user.CreatedAt.Format("2006-01-02"),
-		user.LastSeen.Format("2006-01-02 15:04:05"))
+		user.LastSeen.Format("2006-01-02 15:04:05"),
+	)
 
 	b.sendMessage(chatID, profileMsg)
+	log.Printf("DEBUG: sending profile message to chat %d", chatID)
 }
 
 func (b *Bot) handleStatsCommand(chatID, userID int64) {
@@ -235,7 +254,6 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message) {
 	}
 
 	edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, response)
-	edit.ParseMode = tgbotapi.ModeMarkdown
 
 	if _, err := b.api.Send(edit); err != nil {
 		log.Printf("Failed to edit message: %v", err)
@@ -284,7 +302,6 @@ func (b *Bot) stringPtrToString(s *string) string {
 	return *s
 }
 
-// Updated RunTelegramBot function
 func RunTelegramBot(userService *repository.UserRepository) {
 	bot, err := NewBot(userService)
 	if err != nil {
@@ -294,4 +311,29 @@ func RunTelegramBot(userService *repository.UserRepository) {
 	if err := bot.Run(); err != nil {
 		log.Fatalf("Bot failed: %v", err)
 	}
+}
+
+// my username is nurasyl_orazbek, and "_" gives error at query.
+func escapeMarkdownV2(s string) string {
+	replacer := strings.NewReplacer(
+		"_", "\\_",
+		"*", "\\*",
+		"[", "\\[",
+		"]", "\\]",
+		"(", "\\(",
+		")", "\\)",
+		"~", "\\~",
+		"`", "\\`",
+		">", "\\>",
+		"#", "\\#",
+		"+", "\\+",
+		"-", "\\-",
+		"=", "\\=",
+		"|", "\\|",
+		"{", "\\{",
+		"}", "\\}",
+		".", "\\.",
+		"!", "\\!",
+	)
+	return replacer.Replace(s)
 }
