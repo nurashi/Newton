@@ -33,7 +33,7 @@ func GetWeather(city string) (string, error) {
 	resp, err := http.Get(url)
 
 	if err != nil {
-		return "", fmt.Errorf("ERROR: failed to get resp from weather api", err)
+		return "", fmt.Errorf("ERROR: failed to get resp from weather api: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -41,7 +41,7 @@ func GetWeather(city string) (string, error) {
 	var WheatherCity WheatherResponse 
 
 	if err := json.NewDecoder(resp.Body).Decode(&WheatherCity); err != nil {
-		return "", fmt.Errorf("ERROR: failed to decode response from weather api", err)
+		return "", fmt.Errorf("ERROR: failed to decode response from weather api: %v", err)
 	}
 
 	wheather := fmt.Sprintf(
