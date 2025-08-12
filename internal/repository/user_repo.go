@@ -16,7 +16,6 @@ func NewUserRepository(db *pgxpool.Pool) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-// CreateOrUpdate creates a new user or updates existing user information
 func (r *UserRepository) CreateOrUpdate(ctx context.Context, telegramUser models.TelegramUser) (*models.User, error) {
 	user := &models.User{}
 	
@@ -59,7 +58,6 @@ func (r *UserRepository) CreateOrUpdate(ctx context.Context, telegramUser models
 	return user, nil
 }
 
-// GetByID retrieves a user by ID
 func (r *UserRepository) GetByID(ctx context.Context, userID int64) (*models.User, error) {
 	user := &models.User{}
 	
@@ -87,7 +85,6 @@ func (r *UserRepository) GetByID(ctx context.Context, userID int64) (*models.Use
 	return user, nil
 }
 
-// UpdateLastSeen updates user's last seen timestamp
 func (r *UserRepository) UpdateLastSeen(ctx context.Context, userID int64) error {
 	query := `UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = $1`
 	
@@ -99,7 +96,6 @@ func (r *UserRepository) UpdateLastSeen(ctx context.Context, userID int64) error
 	return nil
 }
 
-// GetStats returns basic statistics about the user
 func (r *UserRepository) GetStats(ctx context.Context, userID int64) (map[string]interface{}, error) {
 	user, err := r.GetByID(ctx, userID)
 	if err != nil {

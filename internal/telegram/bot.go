@@ -103,18 +103,29 @@ func (b *Bot) handleCommand(message *tgbotapi.Message) {
 
 		welcomeMsg := fmt.Sprintf(`Hello %s! Welcome to Newton AI Bot! 
 
-Commands:
-/help - Show this help message
-/clear - Clear conversation history
-/profile - Show your profile information
-/stats - Show your usage statistics
+
+use /help to see all available commands
 
 Just send me any message and I'll respond using AI!`, firstName)
 
 		b.sendMessage(chatID, welcomeMsg)
 
 	case "help":
-		b.handleCommand(message)
+
+			helpMsg := `
+	
+	Commands:
+	/help - Show this help message
+	/clear - Clear conversation history(ai will forget all messanges)
+	/profile - Show your profile information
+	/stats - Show your usage statistics
+	/weather <city> - provides weather
+	/pitch <topic> - provides idea to pitch by following topic
+	
+	`
+
+
+		b.sendMessage(chatID, helpMsg)
 
 	case "clear":
 		delete(b.userHistory, chatID)
@@ -140,6 +151,29 @@ Just send me any message and I'll respond using AI!`, firstName)
 		}
 
 		b.sendMessage(chatID, weatherInfo)
+	case "pitch":
+    args := message.CommandArguments()
+    if args == "" {
+        b.sendMessage(chatID, "Please provide your startup idea. Example: /pitch AI tool for lawyers")
+        return
+    }
+
+    thinkingMsg := tgbotapi.NewMessage(chatID, "Generating your pitch, please wait...")
+    sent, err := b.api.Send(thinkingMsg)
+    if err != nil {
+        log.Printf("Failed to send thinking message: %v", err)
+    }
+
+    pitch, err := ai.GeneratePitch(args)
+    if err != nil {
+        log.Printf("ERROR: failed to generate pitch: %v", err)
+        edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, "❌ Sorry, I couldn't generate pitch right now.")
+        b.api.Send(edit)
+        return
+    }
+
+    edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, pitch)
+    b.api.Send(edit)
 	default:
 		b.sendMessage(chatID, "Unknown command. Use /help to see available commands.")
 	}
