@@ -10,9 +10,6 @@ import (
 
 // Simple migration runner - you might want to use a proper migration tool later
 func RunMigrations(dbpool *pgxpool.Pool) error {
-	// This is a simple way to run migrations
-	// For production, consider using tools like golang-migrate
-	
 	migration := `
 	CREATE TABLE IF NOT EXISTS users (
 		id BIGINT PRIMARY KEY,

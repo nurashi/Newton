@@ -3,7 +3,7 @@ server:
 
 openrouter:
   model: "mistralai/mistral-7b-instruct:free"
-  referer: "https://github.com/nurashi/OpenRouterProject"
+  referer: "https://github.com/nurashi/Newton"
 
 database:
   host: "postgres"

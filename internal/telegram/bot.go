@@ -112,15 +112,17 @@ Just send me any message and I'll respond using AI!`, firstName)
 
 	case "help":
 
-			helpMsg := `
+		helpMsg := `
 	
 	Commands:
-/help - Show this help message
-/clear - Clear conversation history(ai will forget all messanges)
-/profile - Show your profile information
-/stats - Show your usage statistics
-/weather <city> - provides weather
-/pitch <topic> - provides idea to pitch by following topic
+/help - Show this help message.
+/clear - Clear conversation history(ai will forget all messanges).
+/profile - Show your profile information.
+/stats - Show your usage statistics.
+/weather <city> - provides weather.
+/pitch <topic> - provides idea to pitch by following topic.
+/photo <topic> - shows some photo of provided topic by some author.
+/image <topic> - generates image by provided topic. 
 	
 	`
 
@@ -151,28 +153,60 @@ Just send me any message and I'll respond using AI!`, firstName)
 
 		b.sendMessage(chatID, weatherInfo)
 	case "pitch":
-    args := message.CommandArguments()
-    if args == "" {
-        b.sendMessage(chatID, "Please provide your startup idea. Example: /pitch AI tool for lawyers")
-        return
-    }
+		args := message.CommandArguments()
+		if args == "" {
+			b.sendMessage(chatID, "Please provide your startup idea. Example: /pitch AI tool for lawyers")
+			return
+		}
 
-    thinkingMsg := tgbotapi.NewMessage(chatID, "Generating your pitch, please wait...")
-    sent, err := b.api.Send(thinkingMsg)
-    if err != nil {
-        log.Printf("ERROR: Failed to send thinking message: %v", err)
-    }
+		thinkingMsg := tgbotapi.NewMessage(chatID, "Generating your pitch, please wait...")
+		sent, err := b.api.Send(thinkingMsg)
+		if err != nil {
+			log.Printf("ERROR: Failed to send thinking message: %v", err)
+		}
 
-    pitch, err := ai.GeneratePitch(args)
-    if err != nil {
-        log.Printf("ERROR: failed to generate pitch: %v", err)
-        edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, "Sorry, I couldn't generate pitch right now.")
-        b.api.Send(edit)
-        return
-    }
+		pitch, err := ai.GeneratePitch(args)
+		if err != nil {
+			log.Printf("ERROR: failed to generate pitch: %v", err)
+			edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, "Sorry, I couldn't generate pitch right now.")
+			b.api.Send(edit)
+			return
+		}
 
-    edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, pitch)
-    b.api.Send(edit)
+		edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, pitch)
+		b.api.Send(edit)
+
+	case "photo":
+		query := message.CommandArguments()
+		if query == "" {
+			b.sendMessage(message.Chat.ID, "Usage: /photo <query>")
+			return
+		}
+
+		url, caption, err := handlers.SendUnsplashPhoto(chatID, query)
+		if err != nil {
+			b.sendMessage(chatID, "can't find photo for now")
+			return
+		}
+
+		msg := tgbotapi.NewPhoto(chatID, tgbotapi.FileURL(url))
+		msg.Caption = caption
+		if _, err := b.api.Send(msg); err != nil {
+			log.Printf("ERROR: failed to send msg from unsplash: %v", err)
+			return
+		}
+	case "image":
+		prompt := message.CommandArguments()
+
+		url, caption, err := handlers.SendAIImage(prompt)
+		if err != nil {
+			b.sendMessage(chatID, "can't generate image for now")
+		}
+		msg := tgbotapi.NewPhoto(chatID, tgbotapi.FileURL(url))
+		msg.Caption = caption
+		b.api.Send(msg)
+
+
 	default:
 		b.sendMessage(chatID, "Unknown command. Use /help to see available commands.")
 	}
