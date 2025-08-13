@@ -115,15 +115,14 @@ Just send me any message and I'll respond using AI!`, firstName)
 			helpMsg := `
 	
 	Commands:
-	/help - Show this help message
-	/clear - Clear conversation history(ai will forget all messanges)
-	/profile - Show your profile information
-	/stats - Show your usage statistics
-	/weather <city> - provides weather
-	/pitch <topic> - provides idea to pitch by following topic
+/help - Show this help message
+/clear - Clear conversation history(ai will forget all messanges)
+/profile - Show your profile information
+/stats - Show your usage statistics
+/weather <city> - provides weather
+/pitch <topic> - provides idea to pitch by following topic
 	
 	`
-
 
 		b.sendMessage(chatID, helpMsg)
 
@@ -161,13 +160,13 @@ Just send me any message and I'll respond using AI!`, firstName)
     thinkingMsg := tgbotapi.NewMessage(chatID, "Generating your pitch, please wait...")
     sent, err := b.api.Send(thinkingMsg)
     if err != nil {
-        log.Printf("Failed to send thinking message: %v", err)
+        log.Printf("ERROR: Failed to send thinking message: %v", err)
     }
 
     pitch, err := ai.GeneratePitch(args)
     if err != nil {
         log.Printf("ERROR: failed to generate pitch: %v", err)
-        edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, "❌ Sorry, I couldn't generate pitch right now.")
+        edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, "Sorry, I couldn't generate pitch right now.")
         b.api.Send(edit)
         return
     }
@@ -225,11 +224,11 @@ func (b *Bot) handleStatsCommand(chatID, userID int64) {
 
 	statsMsg := fmt.Sprintf(`Your Statistics
 
-	Messages in current session: %d
-	Member since: %s
-	Last seen: %s
+Messages in current session: %d
+Member since: %s
+Last seen: %s
 
-	More detailed statistics coming soon!`,
+More detailed statistics coming soon!`,
 		count,
 		stats["member_since"],
 		stats["last_seen"])
