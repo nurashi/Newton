@@ -79,6 +79,8 @@ func (b *Bot) handleUpdate(update tgbotapi.Update) {
 		b.handleCommand(update.Message)
 	case update.Message.Text != "":
 		b.handleTextMessage(update.Message)
+	case update.Message.Document != nil:
+		b.handleDocument(update.Message)
 	default:
 		b.sendMessage(update.Message.Chat.ID, "I only support text messages for now.")
 	}
@@ -205,6 +207,7 @@ Just send me any message and I'll respond using AI!`, firstName)
 		msg := tgbotapi.NewPhoto(chatID, tgbotapi.FileURL(url))
 		msg.Caption = caption
 		b.api.Send(msg)
+
 
 
 	default:
@@ -403,4 +406,49 @@ func escapeMarkdownV2(s string) string {
 		"!", "\\!",
 	)
 	return replacer.Replace(s)
+}
+
+
+func (b *Bot) handleDocument(message *tgbotapi.Message) {
+    chatID := message.Chat.ID
+    file := message.Document
+
+    if !strings.HasSuffix(strings.ToLower(file.FileName), ".pdf") {
+        b.sendMessage(chatID, "Only PDF files for now")
+        return
+    }
+
+    fileConfig := tgbotapi.FileConfig{FileID: file.FileID}
+    tgFile, err := b.api.GetFile(fileConfig)
+    if err != nil {
+        b.sendMessage(chatID, "failed to get file from telegram")
+        return
+    }
+
+    fileURL := tgFile.Link(b.api.Token) // needed to get file from telegram servers
+    localPath := "/tmp/" + file.FileName
+
+    if err := handlers.DownloadFile(localPath, fileURL); err != nil {
+        b.sendMessage(chatID, "failed to download PDF file")
+        return
+    }
+
+    text, err := handlers.ExtractPDFText(localPath)
+    if err != nil {
+        b.sendMessage(chatID, "failed to read from PDF")
+        return
+    }
+
+    const maxLen = 4000
+    if len(text) > maxLen {
+        for i := 0; i < len(text); i += maxLen {
+            end := i + maxLen
+            if end > len(text) {
+                end = len(text)
+            }
+            b.sendMessage(chatID, text[i:end])
+        }
+    } else {
+        b.sendMessage(chatID, text)
+    }
 }
