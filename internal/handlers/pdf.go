@@ -42,10 +42,9 @@ func ExtractPDFText(path string) (string, error) {
 
     var buf bytes.Buffer
 
-    // В rsc.io/pdf страницы нумеруются с 1
     for i := 1; i <= r.NumPage(); i++ {
         p := r.Page(i)
-        if p.V.IsNull() { // проверка на пустую страницу
+        if p.V.IsNull() {
             continue
         }
 

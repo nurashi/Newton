@@ -393,7 +393,7 @@ func escapeMarkdownV2(s string) string {
 		"(", "\\(",
 		")", "\\)",
 		"~", "\\~",
-		"`", "\\`",
+		"`", "`",
 		">", "\\>",
 		"#", "\\#",
 		"+", "\\+",
@@ -425,7 +425,7 @@ func (b *Bot) handleDocument(message *tgbotapi.Message) {
         return
     }
 
-    fileURL := tgFile.Link(b.api.Token) // needed to get file from telegram servers
+    fileURL := tgFile.Link(b.api.Token) // needed to get file from telegram serversя
     localPath := "/tmp/" + file.FileName
 
     if err := handlers.DownloadFile(localPath, fileURL); err != nil {
@@ -439,7 +439,7 @@ func (b *Bot) handleDocument(message *tgbotapi.Message) {
         return
     }
 
-    const maxLen = 4000
+    const maxLen = 400
     if len(text) > maxLen {
         for i := 0; i < len(text); i += maxLen {
             end := i + maxLen
