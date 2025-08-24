@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package ml;
+
+message PredictRequest {
+  bytes image = 1; 
+}
+
+message PredictResponse {
+  int32 digit = 1; 
+}
+
+service MLService {
+  rpc Predict(PredictRequest) returns (PredictResponse);
+}
