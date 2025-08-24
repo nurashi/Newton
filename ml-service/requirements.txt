@@ -1,5 +1,0 @@
-tensorflow
-grpcio
-grpcio-tools
-protobuf
-numpy

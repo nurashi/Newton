@@ -1,4 +1,4 @@
-name: open-router
+name: newton-bot
 
 services:
   postgres:
