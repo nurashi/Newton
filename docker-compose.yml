@@ -20,6 +20,9 @@ services:
     build: .
     env_file:
       - .env
+    environment:
+      - LM_STUDIO_URL=http://192.168.1.81:1234/v1/chat/completions
+      - LM_STUDIO_MODEL=google/gemma-3-4b
     restart: always
     depends_on:
       postgres:

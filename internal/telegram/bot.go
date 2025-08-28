@@ -78,11 +78,11 @@ func (b *Bot) handleUpdate(update tgbotapi.Update) {
 	case update.Message.IsCommand():
 		b.handleCommand(update.Message)
 	case update.Message.Text != "":
-		b.handleTextMessage(update.Message)
+		b.handleTextMessageLM(update.Message)
 	case update.Message.Document != nil:
 		b.handleDocument(update.Message)
 	default:
-		b.sendMessage(update.Message.Chat.ID, "I only support text messages for now.")
+		b.sendMessage(update.Message.Chat.ID, "I only support text messages, documents, and commands for now.")
 	}
 }
 
@@ -208,8 +208,6 @@ Just send me any message and I'll respond using AI!`, firstName)
 		msg.Caption = caption
 		b.api.Send(msg)
 
-
-
 	default:
 		b.sendMessage(chatID, "Unknown command. Use /help to see available commands.")
 	}
@@ -271,6 +269,46 @@ More detailed statistics coming soon!`,
 		stats["last_seen"])
 
 	b.sendMessage(chatID, statsMsg)
+}
+
+func (b *Bot) handleTextMessageLM(message *tgbotapi.Message) {
+	ctx := context.Background()
+
+	b.userRepo.UpdateLastSeen(ctx, int64(message.From.ID))
+
+	log.Printf("User: %d (%s) in chat %d: %s", message.Chat.ID, message.From.UserName, message.Chat.ID, message.Text)
+
+	typing := tgbotapi.NewChatAction(message.Chat.ID, tgbotapi.ChatTyping)
+
+	b.api.Send(typing)
+
+	thinkingMsg := tgbotapi.NewMessage(message.Chat.ID, "Thinking...")
+	send, err := b.api.Send(thinkingMsg)
+	if err != nil {
+		log.Printf("Failed to send thinking message: %v", err)
+		return
+	}
+
+	start := time.Now()
+	response, err := ai.LMStudioAPICall(message.Text) // message.text = prompt
+	duration := time.Since(start)
+
+
+	if(err != nil) { 
+		log.Printf("ERROR: failed to get LM studio response: %v", err)
+		return
+	}
+
+
+	log.Printf("AI responded in %v", duration)
+
+	edit := tgbotapi.NewEditMessageText(message.Chat.ID, send.MessageID, response)
+
+	if _, err := b.api.Send(edit); err != nil {
+		log.Printf("Failed to edit message: %v", err)
+		b.sendMessage(message.Chat.ID, response)
+	}
+
 }
 
 func (b *Bot) handleTextMessage(message *tgbotapi.Message) {
@@ -408,47 +446,46 @@ func escapeMarkdownV2(s string) string {
 	return replacer.Replace(s)
 }
 
-
 func (b *Bot) handleDocument(message *tgbotapi.Message) {
-    chatID := message.Chat.ID
-    file := message.Document
+	chatID := message.Chat.ID
+	file := message.Document
 
-    if !strings.HasSuffix(strings.ToLower(file.FileName), ".pdf") {
-        b.sendMessage(chatID, "Only PDF files for now")
-        return
-    }
+	if !strings.HasSuffix(strings.ToLower(file.FileName), ".pdf") {
+		b.sendMessage(chatID, "Only PDF files for now")
+		return
+	}
 
-    fileConfig := tgbotapi.FileConfig{FileID: file.FileID}
-    tgFile, err := b.api.GetFile(fileConfig)
-    if err != nil {
-        b.sendMessage(chatID, "failed to get file from telegram")
-        return
-    }
+	fileConfig := tgbotapi.FileConfig{FileID: file.FileID}
+	tgFile, err := b.api.GetFile(fileConfig)
+	if err != nil {
+		b.sendMessage(chatID, "failed to get file from telegram")
+		return
+	}
 
-    fileURL := tgFile.Link(b.api.Token) // needed to get file from telegram serversя
-    localPath := "/tmp/" + file.FileName
+	fileURL := tgFile.Link(b.api.Token) // needed to get file from telegram serversя
+	localPath := "/tmp/" + file.FileName
 
-    if err := handlers.DownloadFile(localPath, fileURL); err != nil {
-        b.sendMessage(chatID, "failed to download PDF file")
-        return
-    }
+	if err := handlers.DownloadFile(localPath, fileURL); err != nil {
+		b.sendMessage(chatID, "failed to download PDF file")
+		return
+	}
 
-    text, err := handlers.ExtractPDFText(localPath)
-    if err != nil {
-        b.sendMessage(chatID, "failed to read from PDF")
-        return
-    }
+	text, err := handlers.ExtractPDFText(localPath)
+	if err != nil {
+		b.sendMessage(chatID, "failed to read from PDF")
+		return
+	}
 
-    const maxLen = 400
-    if len(text) > maxLen {
-        for i := 0; i < len(text); i += maxLen {
-            end := i + maxLen
-            if end > len(text) {
-                end = len(text)
-            }
-            b.sendMessage(chatID, text[i:end])
-        }
-    } else {
-        b.sendMessage(chatID, text)
-    }
+	const maxLen = 400
+	if len(text) > maxLen {
+		for i := 0; i < len(text); i += maxLen {
+			end := i + maxLen
+			if end > len(text) {
+				end = len(text)
+			}
+			b.sendMessage(chatID, text[i:end])
+		}
+	} else {
+		b.sendMessage(chatID, text)
+	}
 }
