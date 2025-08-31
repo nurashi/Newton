@@ -154,7 +154,6 @@ func AskWithHistory(history []Message) (string, error) {
 
 
 func LMStudioAPICall(prompt string) (string, error) {
-	// Используйте IP адрес хоста вместо localhost
 	baseURL := "http://192.168.1.81:1234/v1/chat/completions"
 	model := "google/gemma-3-4b" 
 	
@@ -205,70 +204,5 @@ func LMStudioAPICall(prompt string) (string, error) {
 	if len(parsed.Choices) == 0 {
 		return "AI response is empty", nil
 	}
-	
-	return parsed.Choices[0].Message.Content, nil
-}
-
-// Еще лучше - вынести в переменную окружения
-func LMStudioAPICallWithEnv(prompt string) (string, error) {
-	// Получаем URL из переменной окружения или используем дефолтный
-	baseURL := os.Getenv("LM_STUDIO_URL")
-	if baseURL == "" {
-		baseURL = "http://192.168.1.81:1234/v1/chat/completions"
-	}
-	
-	model := os.Getenv("LM_STUDIO_MODEL")
-	if model == "" {
-		model = "google/gemma-3-4b"
-	}
-	
-	body := RequestBody{
-		Model: model,
-		Messages: []Message{
-			{Role: "user", Content: prompt},
-		},
-	}
-	
-	data, err := json.Marshal(body)
-	if err != nil {
-		log.Printf("ERROR with conversion to json: %v", err)
-		return "", err
-	}
-	
-	req, err := http.NewRequestWithContext(context.Background(), "POST", baseURL, strings.NewReader(string(data)))
-	if err != nil {
-		log.Printf("ERROR with request with context: %v", err)
-		return "", err
-	}
-	
-	req.Header.Set("Content-Type", "application/json")
-	
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	
-	raw, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("ERROR: %v", err)
-		return "", err
-	}
-	
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("API error: %s", string(raw))
-	}
-	
-	var parsed ResponseBody
-	err = json.Unmarshal(raw, &parsed)
-	if err != nil {
-		log.Printf("ERROR parsing response: %v", err)
-		return "", err
-	}
-	
-	if len(parsed.Choices) == 0 {
-		return "AI response is empty", nil
-	}
-	
 	return parsed.Choices[0].Message.Content, nil
 }

@@ -78,7 +78,7 @@ func (b *Bot) handleUpdate(update tgbotapi.Update) {
 	case update.Message.IsCommand():
 		b.handleCommand(update.Message)
 	case update.Message.Text != "":
-		b.handleTextMessage(update.Message)
+		b.handleTextMessageLM(update.Message)
 	case update.Message.Document != nil:
 		b.handleDocument(update.Message)
 	default:
@@ -293,12 +293,10 @@ func (b *Bot) handleTextMessageLM(message *tgbotapi.Message) {
 	response, err := ai.LMStudioAPICall(message.Text) // message.text = prompt
 	duration := time.Since(start)
 
-
-	if(err != nil) { 
+	if err != nil {
 		log.Printf("ERROR: failed to get LM studio response: %v", err)
 		return
 	}
-
 
 	log.Printf("AI responded in %v", duration)
 
