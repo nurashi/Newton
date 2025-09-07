@@ -36,6 +36,8 @@ func RunMigrations(dbpool *pgxpool.Pool) error {
 	return nil
 }
 
+
+
 func createMigrationsTable(ctx context.Context, dbpool *pgxpool.Pool) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
