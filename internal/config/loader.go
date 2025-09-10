@@ -59,6 +59,7 @@ func Load(path string) *Config {
 	return &App
 }
 
+
 func (c *Config) Validate() {
 	if c.Telegram.Token == "" {
 		log.Fatal("Missing Telegram token in config")

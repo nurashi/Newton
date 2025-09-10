@@ -35,9 +35,6 @@ func RunMigrations(dbpool *pgxpool.Pool) error {
 	log.Println("All database migrations completed successfully")
 	return nil
 }
-
-
-
 func createMigrationsTable(ctx context.Context, dbpool *pgxpool.Pool) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS schema_migrations (

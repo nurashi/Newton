@@ -16,7 +16,7 @@ func main() {
 	if cfg == nil {
 		log.Fatal("FATAL: failed to load config")
 	}
-	cfg.Validate()
+	cfg.Validate() 
 
 	log.Printf("CONFIG: %+v", cfg)
 
@@ -29,7 +29,7 @@ func main() {
 	log.Println("SUCCESSFULLY CONNECTED TO POSTGRES")
 
 	if err := migration.RunMigrations(dbpool); err != nil {
-		log.Printf("WARNING: failed to run migrations: %v", err)
+		log.Printf("WARNING: failed to run mig: %v", err)
 	}
 
 	userService := repository.NewUserRepository(dbpool)

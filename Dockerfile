@@ -1,37 +1,17 @@
-# Build stage
-FROM golang:1.24.4-alpine AS builder
+FROM golang:1.24.4-alpine
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
+COPY go.mod ./
+COPY go.sum ./
+RUN go mod download
 
-# Download dependencies with caching
-RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download
-
-# Copy source code
 COPY . .
 
-# Build the binary statically
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o bot ./cmd
+RUN go build -o bot ./cmd
 
-# Runtime stage
-FROM alpine:latest
 
-# Install ca-certificates for HTTPS requests (if needed)
-RUN apk --no-cache add ca-certificates
+COPY .env .env
 
-WORKDIR /root/
-
-# Copy the binary from builder
-COPY --from=builder /app/bot .
-
-# Copy .env if it exists (optional, remove if not needed)
-COPY --from=builder /app/.env .env
-
-# Run as non-root user for security
-RUN adduser -D appuser
-USER appuser
 
 CMD ["./bot"]
