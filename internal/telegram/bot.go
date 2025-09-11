@@ -78,7 +78,7 @@ func (b *Bot) handleUpdate(update tgbotapi.Update) {
 	case update.Message.IsCommand():
 		b.handleCommand(update.Message)
 	case update.Message.Text != "":
-		b.handleTextMessageLM(update.Message)
+		b.handleTextMessage(update.Message)
 	case update.Message.Document != nil:
 		b.handleDocument(update.Message)
 	default:
