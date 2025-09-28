@@ -485,5 +485,6 @@ func (b *Bot) handleDocument(message *tgbotapi.Message) {
 		}
 	} else {
 		b.sendMessage(chatID, text)
+	
 	}
 }
