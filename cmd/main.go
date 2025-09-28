@@ -16,6 +16,7 @@ func main() {
 	if cfg == nil {
 		log.Fatal("FATAL: failed to load config")
 	}
+
 	cfg.Validate() 
 
 	log.Printf("CONFIG: %+v", cfg)
