@@ -18,7 +18,7 @@ func main() {
 	}
 
 	cfg.Validate() 
-
+	// example comment 
 	log.Printf("CONFIG: %+v", cfg)
 
 	dbpool, err := database.NewPostgresPool(cfg.Database)

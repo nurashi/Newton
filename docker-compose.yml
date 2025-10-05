@@ -40,7 +40,10 @@ services:
     image: grafana/grafana
     ports:
       - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
     restart: always
+
 
   node-exporter:
     image: prom/node-exporter
@@ -48,6 +51,24 @@ services:
       - "9100:9100"
     restart: always
 
+  loki:
+    image: grafana/loki:2.9.3
+    command: -config.file=/etc/loki/config.yaml
+    ports:
+      - "3100:3100"
+    restart: always
+
+
+  promtail:
+    image: grafana/promtail:2.9.3
+    volumes:
+      - ./config/promtail-config.yml:/etc/promtail/config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    restart: always
+
+
 
 volumes:
   postgres_data:
+  grafana_data:

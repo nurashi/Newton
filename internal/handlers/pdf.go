@@ -33,32 +33,31 @@ func DownloadFile(filepath string, url string) error {
 	return err
 }
 
-
 func ExtractPDFText(path string) (string, error) {
-    r, err := pdf.Open(path)
-    if err != nil {
-        return "", fmt.Errorf("ERROR: failed to open pdf file by path: %v", err)
-    }
+	r, err := pdf.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("ERROR: failed to open pdf file by path: %v", err)
+	}
 
-    var buf bytes.Buffer
+	var buf bytes.Buffer
 
-    for i := 1; i <= r.NumPage(); i++ {
-        p := r.Page(i)
-        if p.V.IsNull() {
-            continue
-        }
+	for i := 1; i <= r.NumPage(); i++ {
+		p := r.Page(i)
+		if p.V.IsNull() {
+			continue
+		}
 
-        content := p.Content()
-        for _, t := range content.Text {
-            buf.WriteString(t.S)
-            buf.WriteString(" ")
-        }
-    }
+		content := p.Content()
+		for _, t := range content.Text {
+			buf.WriteString(t.S)
+			buf.WriteString(" ")
+		}
+	}
 
-    text := strings.TrimSpace(buf.String())
-    if len(text) == 0 {
-        return "", fmt.Errorf("no text found in PDF")
-    }
+	text := strings.TrimSpace(buf.String())
+	if len(text) == 0 {
+		return "", fmt.Errorf("no text found in PDF")
+	}
 
-    return text, nil
+	return text, nil
 }
