@@ -160,7 +160,6 @@ Just send me any message and I'll respond using AI!`, firstName)
 			b.sendMessage(chatID, "Please provide your startup idea. Example: /pitch AI tool for lawyers")
 			return
 		}
-
 		thinkingMsg := tgbotapi.NewMessage(chatID, "Generating your pitch, please wait...")
 		sent, err := b.api.Send(thinkingMsg)
 		if err != nil {
@@ -340,7 +339,7 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message) {
 	}
 
 	start := time.Now()
-	response, err := ai.AskWithHistory(b.userHistory[chatID])
+	response, err := ai.AskGeminiWithHistory(b.userHistory[chatID])
 	duration := time.Since(start)
 
 	if err != nil {
@@ -485,6 +484,6 @@ func (b *Bot) handleDocument(message *tgbotapi.Message) {
 		}
 	} else {
 		b.sendMessage(chatID, text)
-	
+
 	}
 }

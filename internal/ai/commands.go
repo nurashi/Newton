@@ -2,7 +2,6 @@ package ai
 
 import (
 	"fmt"
-
 )
 
 func GeneratePitch(idea string) (string, error) {
@@ -18,5 +17,5 @@ Include:
 4. Target audience
 5. Business model`, idea)
 
-	return Ask(prompt)
+	return AskGemini(prompt)
 }
