@@ -255,14 +255,15 @@ func (b *Bot) handleStatsCommand(chatID, userID int64) {
 	}
 
 	count := len(b.userHistory[chatID])
+	messageCount := stats["message_count"].(int)
 
-	statsMsg := fmt.Sprintf(`Your Statistics
+	statsMsg := fmt.Sprintf(`📊 Your Statistics
 
-Messages in current session: %d
-Member since: %s
-Last seen: %s
-
-More detailed statistics coming soon!`,
+💬 Total messages sent: %d
+📝 Messages in current session: %d
+📅 Member since: %s
+👁️ Last seen: %s`,
+		messageCount,
 		count,
 		stats["member_since"],
 		stats["last_seen"])
@@ -314,7 +315,11 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message) {
 	prompt := message.Text
 
 	ctx := context.Background()
-	b.userRepo.UpdateLastSeen(ctx, int64(userID))
+
+	// Increment message count for this user
+	if err := b.userRepo.IncrementMessageCount(ctx, int64(userID)); err != nil {
+		log.Printf("Failed to increment message count for user %d: %v", userID, err)
+	}
 
 	log.Printf("User %d (%s) in chat %d: %s",
 		userID, message.From.UserName, chatID, prompt)
