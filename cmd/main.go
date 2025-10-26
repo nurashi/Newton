@@ -8,7 +8,7 @@ import (
 	"github.com/nurashi/Newton/internal/database"
 	"github.com/nurashi/Newton/internal/repository"
 	"github.com/nurashi/Newton/internal/telegram"
-	"github.com/nurashi/Newton/migration"
+	"github.com/nurashi/Newton/migrations"
 )
 
 func main() {
@@ -17,8 +17,7 @@ func main() {
 		log.Fatal("FATAL: failed to load config")
 	}
 
-	cfg.Validate() 
-	// example comment 
+	cfg.Validate()
 	log.Printf("CONFIG: %+v", cfg)
 
 	dbpool, err := database.NewPostgresPool(cfg.Database)
@@ -29,7 +28,7 @@ func main() {
 
 	log.Println("SUCCESSFULLY CONNECTED TO POSTGRES")
 
-	if err := migration.RunMigrations(dbpool); err != nil {
+	if err := migrations.RunMigrations(dbpool); err != nil {
 		log.Printf("WARNING: failed to run mig: %v", err)
 	}
 

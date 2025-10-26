@@ -233,8 +233,8 @@ func AskGemini(prompt string) (string, error) {
 		return "", fmt.Errorf("GEMINI_API_KEY not set")
 	}
 
-	model := "gemini-1.5-flash-latest"
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1/models/%s:generateContent?key=%s", model, apiKey)
+	model := "gemini-2.5-flash"
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
 
 	reqBody := GeminiRequest{
 		Contents: []GeminiContent{
@@ -297,8 +297,8 @@ func AskGeminiWithHistory(history []Message) (string, error) {
 		return "", fmt.Errorf("GEMINI_API_KEY not set")
 	}
 
-	model := "gemini-1.5-flash-latest"
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1/models/%s:generateContent?key=%s", model, apiKey)
+	model := "gemini-2.5-flash"
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
 
 	// Convert our Message format to Gemini format
 	contents := make([]GeminiContent, 0, len(history))

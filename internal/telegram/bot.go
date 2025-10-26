@@ -257,12 +257,12 @@ func (b *Bot) handleStatsCommand(chatID, userID int64) {
 	count := len(b.userHistory[chatID])
 	messageCount := stats["message_count"].(int)
 
-	statsMsg := fmt.Sprintf(`📊 Your Statistics
+	statsMsg := fmt.Sprintf(`Your Statistics
 
-💬 Total messages sent: %d
-📝 Messages in current session: %d
-📅 Member since: %s
-👁️ Last seen: %s`,
+Total messages sent: %d
+Messages in current session: %d
+Member since: %s
+Last seen: %s`,
 		messageCount,
 		count,
 		stats["member_since"],
