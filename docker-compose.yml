@@ -23,10 +23,15 @@ services:
     environment:
       - LM_STUDIO_URL=http://192.168.1.81:1234/v1/chat/completions
       - LM_STUDIO_MODEL=google/gemma-3-4b
+      - METRICS_PORT=9090
+      - LOG_LEVEL=info
+      - ENV=production
     restart: always
     depends_on:
       postgres:
         condition: service_healthy
+    ports:
+      - "9090:9090"  # ← ДОБАВЛЕНО для метрик
     labels: 
       logging: "promtail"
       
@@ -34,8 +39,9 @@ services:
     image: prom/prometheus
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus 
     ports:
-      - "9090:9090"
+      - "9091:9090" 
     restart: always
 
   grafana:
@@ -44,8 +50,13 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
     restart: always
-
+    depends_on:
+      - prometheus
+      - loki
 
   node-exporter:
     image: prom/node-exporter
@@ -58,19 +69,24 @@ services:
     command: -config.file=/etc/loki/config.yaml
     ports:
       - "3100:3100"
+    volumes:
+      - ./config/loki.yml:/etc/loki/config.yaml
+      - loki_data:/tmp/loki 
     restart: always
-
 
   promtail:
     image: grafana/promtail:2.9.3
     volumes:
       - ./config/promtail-config.yml:/etc/promtail/config.yml
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock 
     command: -config.file=/etc/promtail/config.yml
     restart: always
-
-
+    depends_on:
+      - loki
 
 volumes:
   postgres_data:
   grafana_data:
+  prometheus_data: 
+  loki_data: 
