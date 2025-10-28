@@ -20,8 +20,7 @@ func (r *UserRepository) CreateOrUpdate(ctx context.Context, telegramUser models
 	user := &models.User{}
 
 	query := `
-		INSERT INTO users (id, username, first_name, last_name, is_bot, language_code, last_seen)
-		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+		INSERT INTO users (id, username, first_name, last_name, is_bot, language_code, last_seen) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
 		ON CONFLICT (id) DO UPDATE SET username = EXCLUDED.username, first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name,
 			is_bot = EXCLUDED.is_bot,
 			language_code = EXCLUDED.language_code,

@@ -27,7 +27,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-  
+    labels: 
+      logging: "promtail"
+      
   prometheus:
     image: prom/prometheus
     volumes:
