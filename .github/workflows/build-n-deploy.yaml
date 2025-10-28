@@ -14,13 +14,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Load environment variables # from base64 string
+      - name: Load environment variables
         run: |
           echo ${{ secrets.ENV }} | base64 -d > .env
         shell: bash
 
-      - name: Build Docker containers
+      - name: Stop old containers safely
+        run: |
+          docker compose down || true
+        shell: bash
+
+      - name: Build new containers
         run: docker compose build --no-cache
 
-      - name: Start Docker containers
+      - name: Start updated stack
         run: docker compose up -d --build

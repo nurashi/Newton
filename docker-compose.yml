@@ -31,7 +31,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "9090:9090"  # ← ДОБАВЛЕНО для метрик
+      - "9090:9090"
     labels: 
       logging: "promtail"
       
@@ -40,8 +40,9 @@ services:
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus 
+    # Changed host port from 9091 -> 9095 to avoid conflicts
     ports:
-      - "9091:9090" 
+      - "9095:9090"
     restart: always
 
   grafana:
@@ -89,4 +90,4 @@ volumes:
   postgres_data:
   grafana_data:
   prometheus_data: 
-  loki_data: 
+  loki_data:
