@@ -30,7 +30,7 @@ type PostgreSQL struct {
 type Telegram struct {
 	Token string `mapstructure:"token"`
 }
-
+// platonus 
 var App Config
 
 func Load(path string) *Config {
