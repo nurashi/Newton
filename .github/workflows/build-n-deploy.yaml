@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     name: Build and Deploy Docker Compose
-    runs-on: [self-hosted, abzy-server]
+    runs-on: self-hosted # nurashi-server
 
     steps:
       - name: Checkout code
