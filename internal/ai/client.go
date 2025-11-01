@@ -300,16 +300,25 @@ func AskGeminiWithHistory(history []Message) (string, error) {
 	model := "gemini-2.5-flash"
 	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
 
+
+	systemPrompt := "You are a helpful assistant as a Telegram bot(consider message max size of telegram message). Always provide concise and clear answers. Keep responses brief and to the point.\n\n"
+
 	// Convert our Message format to Gemini format
 	contents := make([]GeminiContent, 0, len(history))
-	for _, msg := range history {
+	for i, msg := range history {
 		role := msg.Role
 		// Gemini uses "user" and "model" instead of "user" and "assistant"
 		if msg.Role == "assistant" {
 			role = "model"
 		}
+
+		text := msg.Content
+
+        if i == 0 && msg.Role == "user" {
+            text = systemPrompt + msg.Content
+        }
 		contents = append(contents, GeminiContent{
-			Parts: []GeminiPart{{Text: msg.Content}},
+			Parts: []GeminiPart{{Text: text}},
 			Role:  role,
 		})
 	}
