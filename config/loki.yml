@@ -42,3 +42,4 @@ ruler:
 
 limits_config:
   retention_period: 744h  
+  volume_enabled: true
