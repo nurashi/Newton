@@ -301,13 +301,12 @@ func AskGeminiWithHistory(history []Message) (string, error) {
 	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
 
 
-	systemPrompt := "You are a helpful assistant as a Telegram bot(consider message max size of telegram message). Always provide concise and clear answers. Keep responses brief and to the point.\n\n"
+	systemPrompt := "You are a helpful assistant as a Telegram bot(consider message max size of telegram message: 4096 char limit). Always provide concise and clear answers. Keep responses brief and to the point.\n\n"
 
 	// Convert our Message format to Gemini format
 	contents := make([]GeminiContent, 0, len(history))
 	for i, msg := range history {
 		role := msg.Role
-		// Gemini uses "user" and "model" instead of "user" and "assistant"
 		if msg.Role == "assistant" {
 			role = "model"
 		}
