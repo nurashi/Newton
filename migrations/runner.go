@@ -38,10 +38,7 @@ func RunMigrations(dbpool *pgxpool.Pool) error {
 
 func createMigrationsTable(ctx context.Context, dbpool *pgxpool.Pool) error {
 	query := `
-		CREATE TABLE IF NOT EXISTS schema_migrations (
-			version VARCHAR(255) PRIMARY KEY,
-			applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		);
+		CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(255) PRIMARY KEY, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
 	`
 	_, err := dbpool.Exec(ctx, query)
 	return err

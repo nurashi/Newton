@@ -314,9 +314,14 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message) {
 	userID := message.From.ID
 	prompt := message.Text
 
+	// Special case for @UsenAsylan
+	if message.From.UserName == "UsenAsylan" {
+		b.sendMessage(chatID, "Хромтау")
+		return
+	}
+
 	ctx := context.Background()
 
-	// Increment message count for this user
 	if err := b.userRepo.IncrementMessageCount(ctx, int64(userID)); err != nil {
 		log.Printf("Failed to increment message count for user %d: %v", userID, err)
 	}
