@@ -15,12 +15,15 @@ import (
 	"github.com/nurashi/Newton/internal/repository"
 )
 
+// Bot represents the Telegram bot instance
 type Bot struct {
 	api         *tgbotapi.BotAPI
 	userRepo    *repository.UserRepository
 	userHistory map[int64][]ai.Message
+	pdfContext  map[int64]string
 }
 
+// NewBot creates a new Telegram bot instance
 func NewBot(userRepo *repository.UserRepository) (*Bot, error) {
 	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 	if botToken == "" {
@@ -38,6 +41,7 @@ func NewBot(userRepo *repository.UserRepository) (*Bot, error) {
 		api:         api,
 		userRepo:    userRepo,
 		userHistory: make(map[int64][]ai.Message),
+		pdfContext:  make(map[int64]string),
 	}, nil
 }
 
@@ -271,7 +275,7 @@ Last seen: %s`,
 	b.sendMessage(chatID, statsMsg)
 }
 
-func (b *Bot) handleTextMessageLM(message *tgbotapi.Message) {
+func (b *Bot) handleTextMessageLM(message *tgbotapi.Message) { // just exist, to test work with LM studio
 	ctx := context.Background()
 
 	b.userRepo.UpdateLastSeen(ctx, int64(message.From.ID))
@@ -363,10 +367,15 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message) {
 	}
 
 	edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, response)
+	edit.ParseMode = "Markdown" // to parse ai response, (in my case, to text formating )
 
 	if _, err := b.api.Send(edit); err != nil {
 		log.Printf("Failed to edit message: %v", err)
-		b.sendMessage(chatID, response)
+
+		msg := tgbotapi.NewMessage(chatID, response)
+		msg.ParseMode = "Markdown"
+
+		b.api.Send(msg)
 	}
 }
 
@@ -456,20 +465,33 @@ func (b *Bot) handleDocument(message *tgbotapi.Message) {
 		return
 	}
 
+	typing := tgbotapi.NewChatAction(chatID, tgbotapi.ChatUploadDocument)
+	b.api.Send(typing)
+
+	proccessingMsg := tgbotapi.NewMessage(chatID, "Proccessing PDF...")
+	send, err := b.api.Send(proccessingMsg)
+
+	if err != nil {
+		log.Printf("Failed to send proccessing messaeg: %v", err)
+	}
+
 	fileConfig := tgbotapi.FileConfig{FileID: file.FileID}
 	tgFile, err := b.api.GetFile(fileConfig)
 	if err != nil {
-		b.sendMessage(chatID, "failed to get file from telegram")
+		b.editOrSendMessage(chatID, send.MessageID, "FAILED: to get file from Telegram")
+		log.Printf("ERROR: failed to get file: %v", err)
 		return
 	}
 
-	fileURL := tgFile.Link(b.api.Token) // needed to get file from telegram serversя
-	localPath := "/tmp/" + file.FileName
+	fileURL := tgFile.Link(b.api.Token)
+	localPath := fmt.Sprintf("/tmp/%d_%s", time.Now().Unix(), file.FileName)
 
 	if err := handlers.DownloadFile(localPath, fileURL); err != nil {
 		b.sendMessage(chatID, "failed to download PDF file")
 		return
 	}
+
+	defer os.Remove(localPath)
 
 	text, err := handlers.ExtractPDFText(localPath)
 	if err != nil {
@@ -477,17 +499,72 @@ func (b *Bot) handleDocument(message *tgbotapi.Message) {
 		return
 	}
 
-	const maxLen = 400
-	if len(text) > maxLen {
-		for i := 0; i < len(text); i += maxLen {
-			end := i + maxLen
-			if end > len(text) {
-				end = len(text)
-			}
-			b.sendMessage(chatID, text[i:end])
-		}
-	} else {
-		b.sendMessage(chatID, text)
+	if strings.TrimSpace(text) == "" {
+		b.editOrSendMessage(chatID, send.MessageID, "No text found in PDF, it might be image pdf")
+		return
+	}
 
+	edit := tgbotapi.NewEditMessageText(chatID, send.MessageID, "Analyzing PDF...")
+	b.api.Send(edit)
+
+	b.analyzePDF(chatID, send.MessageID, text, file.FileName)
+
+}
+
+func (b *Bot) analyzePDF(chatID int64, messageID int, pdfText string, filename string) {
+	startTime := time.Now()
+
+	const maxPDFText = 1500
+	truncated := false
+
+	if len(pdfText) > maxPDFText {
+		pdfText = pdfText[:maxPDFText]
+		truncated = true
+	}
+
+	sysPrompt := fmt.Sprintf(`You are analyzing a PDF document titled "%s".
+
+Your task:
+1. Provide a concise summary (2-3 sentences)
+2. List key points or main topics (bullet points)
+3. If there are any numbers, dates, or important data - highlight them
+
+Document text:
+%s
+
+%s
+
+Format your response in Markdown for better readability.`, filename, pdfText, map[bool]string{true: "\n\nNote: Text was truncated due to length.", false: ""}[truncated],
+	)
+	response, err := ai.AskGemini(sysPrompt)
+	if err != nil {
+		log.Printf("AI analysis failed: %v", err)
+		b.editOrSendMessage(chatID, messageID, fmt.Sprintf("AI analysis failed: %v\n\nYou can try asking me questions about the document manually.", err))
+		return
+	}
+
+	fullResponse := fmt.Sprintf("*Analysis of:* `%s`\n\n%s", filename, response)
+
+	edit := tgbotapi.NewEditMessageText(chatID, messageID, fullResponse)
+	edit.ParseMode = "Markdown"
+
+	if _, err := b.api.Send(edit); err != nil {
+		log.Printf("Failed to edit message with AI response: %v", err)
+
+		msg := tgbotapi.NewMessage(chatID, fullResponse)
+		msg.ParseMode = "Markdown"
+		b.api.Send(msg)
+	}
+
+	log.Printf("PDF analyzed in %v for chat %d", time.Since(startTime), chatID)
+}
+
+func (b *Bot) editOrSendMessage(chatID int64, messageID int, text string) {
+	edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
+	edit.ParseMode = "Markdown"
+
+	if _, err := b.api.Send(edit); err != nil {
+		log.Printf("Failed to edit message, sending new: %v", err)
+		b.sendMessage(chatID, text)
 	}
 }

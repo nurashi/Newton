@@ -14,11 +14,11 @@ git clone git@github.com:nurashi/Newton.git
 ## Usage: if you want to build it by yourself.
 
 ```go
-// synchronize the go.mod and go.sum files with the actual dependencies
-go mod tidy 
-
 // run
 docker-compose up --build -d
+
+// down
+docker-compose down
 ```
 
 ## Contributing
