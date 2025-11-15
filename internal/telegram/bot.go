@@ -366,16 +366,9 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message) {
 		log.Printf("AI responded in %v for user %d", duration, userID)
 	}
 
-	edit := tgbotapi.NewEditMessageText(chatID, sent.MessageID, response)
-	edit.ParseMode = "Markdown" // to parse ai response, (in my case, to text formating )
-
-	if _, err := b.api.Send(edit); err != nil {
-		log.Printf("Failed to edit message: %v", err)
-
-		msg := tgbotapi.NewMessage(chatID, response)
-		msg.ParseMode = "Markdown"
-
-		b.api.Send(msg)
+	// Send response (handles long messages and markdown)
+	if err := b.sendLongMessage(chatID, sent.MessageID, response, true); err != nil {
+		log.Printf("Failed to send response: %v", err)
 	}
 }
 
@@ -418,6 +411,162 @@ func (b *Bot) stringPtrToString(s *string) string {
 		return "N/A"
 	}
 	return *s
+}
+
+// sanitizeMarkdown fixes common Markdown issues that break Telegram parsing
+func sanitizeMarkdown(text string) string {
+	lines := strings.Split(text, "\n")
+	var result []string
+	inCodeBlock := false
+
+	for _, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+			inCodeBlock = !inCodeBlock
+			result = append(result, line)
+			continue
+		}
+
+		if inCodeBlock {
+			result = append(result, line)
+			continue
+		}
+
+		backtickCount := strings.Count(line, "`")
+		if backtickCount%2 != 0 {
+			line += "`"
+		}
+
+		result = append(result, line)
+	}
+
+	finalText := strings.Join(result, "\n")
+
+	codeBlockCount := strings.Count(finalText, "```")
+	if codeBlockCount%2 != 0 {
+		finalText += "\n```"
+	}
+
+	return finalText
+}
+
+// splitLongMessage splits message into chunks under maxLen chars
+func splitLongMessage(text string, maxLen int) []string {
+	if len(text) <= maxLen {
+		return []string{text}
+	}
+
+	var chunks []string
+	var currentChunk strings.Builder
+	inCodeBlock := false
+	codeBlockLang := ""
+
+	lines := strings.Split(text, "\n")
+
+	for _, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+			if !inCodeBlock {
+				inCodeBlock = true
+				codeBlockLang = strings.TrimPrefix(strings.TrimSpace(line), "```")
+			} else {
+				inCodeBlock = false
+				codeBlockLang = ""
+			}
+		}
+
+		if currentChunk.Len()+len(line)+1 > maxLen {
+			chunkText := currentChunk.String()
+			if inCodeBlock {
+				chunkText += "\n```"
+			}
+			chunks = append(chunks, chunkText)
+			currentChunk.Reset()
+
+			if inCodeBlock {
+				currentChunk.WriteString("```" + codeBlockLang + "\n")
+			}
+		}
+
+		if currentChunk.Len() > 0 {
+			currentChunk.WriteString("\n")
+		}
+		currentChunk.WriteString(line)
+	}
+
+	if currentChunk.Len() > 0 {
+		chunks = append(chunks, currentChunk.String())
+	}
+
+	return chunks
+}
+
+// sendLongMessage sends a message, splitting if necessary
+func (b *Bot) sendLongMessage(chatID int64, messageID int, text string, isEdit bool) error {
+	const maxTelegramLength = 4000
+
+	text = sanitizeMarkdown(text)
+
+	chunks := splitLongMessage(text, maxTelegramLength)
+
+	if len(chunks) == 1 {
+		if isEdit {
+			edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
+			edit.ParseMode = "Markdown"
+
+			if _, err := b.api.Send(edit); err != nil {
+				log.Printf("Markdown failed, trying plain text: %v", err)
+				edit.ParseMode = ""
+				if _, err := b.api.Send(edit); err != nil {
+					return b.sendPlainMessage(chatID, text)
+				}
+			}
+			return nil
+		}
+		return b.sendPlainMessage(chatID, text)
+	}
+
+	if isEdit {
+		deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
+		b.api.Send(deleteMsg)
+	}
+
+	for i, chunk := range chunks {
+		var msgText string
+		if len(chunks) > 1 {
+			msgText = fmt.Sprintf("*Part %d/%d*\n\n%s", i+1, len(chunks), chunk)
+		} else {
+			msgText = chunk
+		}
+
+		if err := b.sendPlainMessage(chatID, msgText); err != nil {
+			return err
+		}
+
+		if i < len(chunks)-1 {
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
+
+	return nil
+}
+
+// sendPlainMessage sends a single message with markdown fallback
+func (b *Bot) sendPlainMessage(chatID int64, text string) error {
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = "Markdown"
+
+	_, err := b.api.Send(msg)
+	if err != nil {
+		log.Printf("Markdown failed, sending plain text: %v", err)
+		msg.ParseMode = ""
+
+		msg.Text = strings.ReplaceAll(text, "```", "")
+		msg.Text = strings.ReplaceAll(msg.Text, "`", "")
+		msg.Text = strings.ReplaceAll(msg.Text, "*", "")
+		msg.Text = strings.ReplaceAll(msg.Text, "_", "")
+		_, err = b.api.Send(msg)
+	}
+
+	return err
 }
 
 func RunTelegramBot(userService *repository.UserRepository) {
@@ -539,21 +688,16 @@ Format your response in Markdown for better readability.`, filename, pdfText, ma
 	response, err := ai.AskGemini(sysPrompt)
 	if err != nil {
 		log.Printf("AI analysis failed: %v", err)
-		b.editOrSendMessage(chatID, messageID, fmt.Sprintf("AI analysis failed: %v\n\nYou can try asking me questions about the document manually.", err))
+		b.editOrSendMessage(chatID, messageID, fmt.Sprintf("❌ AI analysis failed: %v", err))
 		return
 	}
 
-	fullResponse := fmt.Sprintf("*Analysis of:* `%s`\n\n%s", filename, response)
+	// Add header to response
+	fullResponse := fmt.Sprintf("📄 *Analysis of:* `%s`\n\n%s\n\n💡 _You can now ask me questions about this document!_", filename, response)
 
-	edit := tgbotapi.NewEditMessageText(chatID, messageID, fullResponse)
-	edit.ParseMode = "Markdown"
-
-	if _, err := b.api.Send(edit); err != nil {
-		log.Printf("Failed to edit message with AI response: %v", err)
-
-		msg := tgbotapi.NewMessage(chatID, fullResponse)
-		msg.ParseMode = "Markdown"
-		b.api.Send(msg)
+	// Send result (handles long messages and markdown)
+	if err := b.sendLongMessage(chatID, messageID, fullResponse, true); err != nil {
+		log.Printf("Failed to send PDF analysis: %v", err)
 	}
 
 	log.Printf("PDF analyzed in %v for chat %d", time.Since(startTime), chatID)
