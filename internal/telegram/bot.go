@@ -688,14 +688,12 @@ Format your response in Markdown for better readability.`, filename, pdfText, ma
 	response, err := ai.AskGemini(sysPrompt)
 	if err != nil {
 		log.Printf("AI analysis failed: %v", err)
-		b.editOrSendMessage(chatID, messageID, fmt.Sprintf("❌ AI analysis failed: %v", err))
+		b.editOrSendMessage(chatID, messageID, fmt.Sprintf("AI analysis failed: %v", err))
 		return
 	}
 
-	// Add header to response
-	fullResponse := fmt.Sprintf("📄 *Analysis of:* `%s`\n\n%s\n\n💡 _You can now ask me questions about this document!_", filename, response)
+	fullResponse := fmt.Sprintf("*Analysis of:* `%s`\n\n%s\n\n_You can now ask me questions about this document!_", filename, response)
 
-	// Send result (handles long messages and markdown)
 	if err := b.sendLongMessage(chatID, messageID, fullResponse, true); err != nil {
 		log.Printf("Failed to send PDF analysis: %v", err)
 	}
