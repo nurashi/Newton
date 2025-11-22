@@ -186,7 +186,7 @@ func AskGeminiWithHistory(history []Message) (string, error) {
 		model := "gemini-2.5-flash"
 		url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
 
-		systemPrompt := "You are a assistant as a Telegram bot. Always clear answers and conclusion in a simple words. Keep responses brief and to the point. Also text formatting should be for telegram message.\n\n"
+		systemPrompt := "You are a assistant as a Telegram bot. Clear answers and conclusion in a simple words. Keep responses brief and to the point. Also text formatting should be for telegram message.\n\n"
 
 		contents := make([]GeminiContent, 0, len(history))
 		for i, msg := range history {
