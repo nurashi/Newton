@@ -15,8 +15,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Load environment variables
+        env:
+          ENV_SECRET: ${{ secrets.ENV }}
         run: |
-          echo ${{ secrets.ENV }} | base64 -d > .env
+          if [ -z "$ENV_SECRET" ] || [ "$ENV_SECRET" = "***" ]; then
+            echo "Error: ENV secret is not set or empty"
+            exit 1
+          fi
+          echo "$ENV_SECRET" | base64 -d > .env
         shell: bash
 
       - name: Stop old containers safely
