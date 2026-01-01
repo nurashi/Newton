@@ -7,28 +7,24 @@ import (
 	"os"
 )
 
-type WheatherResponse struct { 
-	Location struct { 
-		Name string `json:"name"`
-		Country string `json:"country"`
+type WheatherResponse struct {
+	Location struct {
+		Name      string `json:"name"`
+		Country   string `json:"country"`
 		Localtime string `json:"localtime"`
 	} `json:"location"`
 
-
-	Current struct { 
-		TempC float64 `json:"temp_c"`
+	Current struct {
+		TempC     float64 `json:"temp_c"`
 		Condition struct {
 			Text string `json:"text"`
 		} `json:"condition"`
-	}`json:"current"`
+	} `json:"current"`
 }
 
-
-
-func GetWeather(city string) (string, error) { 
+func GetWeather(city string) (string, error) {
 	apiKey := os.Getenv("WHETHER_API_KEY")
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", apiKey, city)
-
 
 	resp, err := http.Get(url)
 
@@ -37,8 +33,7 @@ func GetWeather(city string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-
-	var WheatherCity WheatherResponse 
+	var WheatherCity WheatherResponse
 
 	if err := json.NewDecoder(resp.Body).Decode(&WheatherCity); err != nil {
 		return "", fmt.Errorf("ERROR: failed to decode response from weather api: %v", err)
@@ -52,7 +47,6 @@ func GetWeather(city string) (string, error) {
 		WheatherCity.Current.TempC,
 		WheatherCity.Location.Localtime,
 	)
-
 
 	return wheather, nil
 }
