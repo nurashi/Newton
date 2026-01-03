@@ -172,6 +172,127 @@ func AskGemini(prompt string) (string, error) {
 	return result, nil
 }
 
+// GenerateEducationalGuide creates a comprehensive educational guide from document text
+func GenerateEducationalGuide(documentText, filename, fileType string) (string, error) {
+	var result string
+	var geminiResp GeminiResponse
+
+	const maxDocText = 8000
+	truncated := false
+
+	if len(documentText) > maxDocText {
+		documentText = documentText[:maxDocText]
+		truncated = true
+	}
+
+	truncateNote := ""
+	if truncated {
+		truncateNote = "\n\nNote: Document was truncated due to length. Analysis covers the first part."
+	}
+
+	prompt := fmt.Sprintf(`You are an expert educational content creator. Analyze this %s document titled "%s" and create a comprehensive EDUCATIONAL GUIDE.
+
+DOCUMENT CONTENT:
+%s
+%s
+
+YOUR TASK - Create an Educational Guide with these sections:
+
+## Overview
+Brief summary of what this document is about (2-3 sentences)
+
+## Key Concepts & Definitions
+List and explain the main concepts, terms, and definitions found in the document. Format as:
+• **Term/Concept**: Clear explanation
+
+## Main Topics Covered
+Organized list of the main topics/sections with brief descriptions
+
+## Key Takeaways
+The most important points a learner should remember (numbered list)
+
+## Study Questions
+Generate 3-5 questions that would help test understanding of this material
+
+## How Topics Connect
+Explain how the different concepts in this document relate to each other
+
+## Quick Summary for Review
+A concise recap (3-5 bullet points) perfect for quick revision
+
+Format everything in clean Markdown for Telegram. Be educational, clear, and helpful!`, fileType, filename, documentText, truncateNote)
+
+	err := retryWithBackoff(4, func() error {
+		apiKey := os.Getenv("GEMINI_API_KEY")
+		if apiKey == "" {
+			return fmt.Errorf("GEMINI_API_KEY not set")
+		}
+
+		model := "gemini-2.5-flash"
+		url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
+
+		reqBody := GeminiRequest{
+			Contents: []GeminiContent{
+				{
+					Parts: []GeminiPart{
+						{Text: prompt},
+					},
+				},
+			},
+		}
+
+		jsonData, err := json.Marshal(reqBody)
+		if err != nil {
+			return fmt.Errorf("failed to marshal request: %w", err)
+		}
+
+		req, err := http.NewRequestWithContext(context.Background(), "POST", url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			return fmt.Errorf("failed to create request: %w", err)
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to send request: %w", err)
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read response: %w", err)
+		}
+
+		if resp.StatusCode != 200 {
+			return fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
+		}
+
+		if err := json.Unmarshal(body, &geminiResp); err != nil {
+			return fmt.Errorf("failed to unmarshal response: %w", err)
+		}
+
+		if len(geminiResp.Candidates) == 0 || len(geminiResp.Candidates[0].Content.Parts) == 0 {
+			result = "AI response is empty"
+			return nil
+		}
+
+		result = geminiResp.Candidates[0].Content.Parts[0].Text
+		return nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	log.Printf("Educational Guide generated - tokens: prompt=%d, response=%d, total=%d",
+		geminiResp.UsageMetadata.PromptTokenCount,
+		geminiResp.UsageMetadata.CandidatesTokenCount,
+		geminiResp.UsageMetadata.TotalTokenCount)
+
+	return result, nil
+}
+
 // AskGeminiWithHistory sends conversation history to Google Gemini API
 func AskGeminiWithHistory(history []Message) (string, error) {
 	var result string

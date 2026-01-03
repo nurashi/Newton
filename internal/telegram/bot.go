@@ -608,26 +608,30 @@ func escapeMarkdownV2(s string) string {
 func (b *Bot) handleDocument(message *tgbotapi.Message) {
 	chatID := message.Chat.ID
 	file := message.Document
+	filename := strings.ToLower(file.FileName)
 
-	if !strings.HasSuffix(strings.ToLower(file.FileName), ".pdf") {
-		b.sendMessage(chatID, "Only PDF files for now")
+	// Check supported file types
+	ext := handlers.GetFileExtension(filename)
+	if ext != "pdf" && ext != "pptx" {
+		b.sendMessage(chatID, "Supported formats: PDF and PPTX files only")
 		return
 	}
 
 	typing := tgbotapi.NewChatAction(chatID, tgbotapi.ChatUploadDocument)
 	b.api.Send(typing)
 
-	proccessingMsg := tgbotapi.NewMessage(chatID, "Proccessing PDF...")
-	send, err := b.api.Send(proccessingMsg)
+	fileTypeLabel := strings.ToUpper(ext)
+	processingMsg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Processing %s...", fileTypeLabel))
+	send, err := b.api.Send(processingMsg)
 
 	if err != nil {
-		log.Printf("Failed to send proccessing messaeg: %v", err)
+		log.Printf("Failed to send processing message: %v", err)
 	}
 
 	fileConfig := tgbotapi.FileConfig{FileID: file.FileID}
 	tgFile, err := b.api.GetFile(fileConfig)
 	if err != nil {
-		b.editOrSendMessage(chatID, send.MessageID, "FAILED: to get file from Telegram")
+		b.editOrSendMessage(chatID, send.MessageID, "Failed to get file from Telegram")
 		log.Printf("ERROR: failed to get file: %v", err)
 		return
 	}
@@ -636,69 +640,56 @@ func (b *Bot) handleDocument(message *tgbotapi.Message) {
 	localPath := fmt.Sprintf("/tmp/%d_%s", time.Now().Unix(), file.FileName)
 
 	if err := handlers.DownloadFile(localPath, fileURL); err != nil {
-		b.sendMessage(chatID, "failed to download PDF file")
+		b.sendMessage(chatID, fmt.Sprintf("Failed to download %s file", fileTypeLabel))
 		return
 	}
 
 	defer os.Remove(localPath)
 
-	text, err := handlers.ExtractPDFText(localPath)
+	var text string
+	switch ext {
+	case "pdf":
+		text, err = handlers.ExtractPDFText(localPath)
+	case "pptx":
+		text, err = handlers.ExtractPPTXText(localPath)
+	}
+
 	if err != nil {
-		b.sendMessage(chatID, "failed to read from PDF")
+		b.editOrSendMessage(chatID, send.MessageID, fmt.Sprintf("❌ Failed to read %s: %v", fileTypeLabel, err))
 		return
 	}
 
 	if strings.TrimSpace(text) == "" {
-		b.editOrSendMessage(chatID, send.MessageID, "No text found in PDF, it might be image pdf")
+		b.editOrSendMessage(chatID, send.MessageID, fmt.Sprintf("📭 No text found in %s. It might be image-based.", fileTypeLabel))
 		return
 	}
 
-	edit := tgbotapi.NewEditMessageText(chatID, send.MessageID, "Analyzing PDF...")
+	edit := tgbotapi.NewEditMessageText(chatID, send.MessageID, "🎓 Creating Educational Guide...")
 	b.api.Send(edit)
 
-	b.analyzePDF(chatID, send.MessageID, text, file.FileName)
-
+	b.createEducationalGuide(chatID, send.MessageID, text, file.FileName, fileTypeLabel)
 }
 
-func (b *Bot) analyzePDF(chatID int64, messageID int, pdfText string, filename string) {
+func (b *Bot) createEducationalGuide(chatID int64, messageID int, documentText string, filename string, fileType string) {
 	startTime := time.Now()
 
-	const maxPDFText = 1500
-	truncated := false
-
-	if len(pdfText) > maxPDFText {
-		pdfText = pdfText[:maxPDFText]
-		truncated = true
-	}
-
-	sysPrompt := fmt.Sprintf(`You are analyzing a PDF document titled "%s".
-
-Your task:
-1. Provide a concise summary (2-3 sentences)
-2. List key points or main topics (bullet points)
-3. If there are any numbers, dates, or important data - highlight them
-
-Document text:
-%s
-
-%s
-
-Format your response in Markdown for better readability.`, filename, pdfText, map[bool]string{true: "\n\nNote: Text was truncated due to length.", false: ""}[truncated],
-	)
-	response, err := ai.AskGemini(sysPrompt)
+	response, err := ai.GenerateEducationalGuide(documentText, filename, fileType)
 	if err != nil {
-		log.Printf("AI analysis failed: %v", err)
-		b.editOrSendMessage(chatID, messageID, fmt.Sprintf("AI analysis failed: %v", err))
+		log.Printf("Educational guide generation failed: %v", err)
+		b.editOrSendMessage(chatID, messageID, fmt.Sprintf("Failed to generate guide: %v", err))
 		return
 	}
 
-	fullResponse := fmt.Sprintf("*Analysis of:* `%s`\n\n%s\n\n_You can now ask me questions about this document!_", filename, response)
+	fullResponse := fmt.Sprintf("*Educational Guide*\n `%s`\n\n%s\n\n_You can now ask me questions about this document!_", filename, response)
+
+	// Store context for follow-up questions
+	b.pdfContext[chatID] = documentText
 
 	if err := b.sendLongMessage(chatID, messageID, fullResponse, true); err != nil {
-		log.Printf("Failed to send PDF analysis: %v", err)
+		log.Printf("Failed to send educational guide: %v", err)
 	}
 
-	log.Printf("PDF analyzed in %v for chat %d", time.Since(startTime), chatID)
+	log.Printf("Educational guide created in %v for chat %d", time.Since(startTime), chatID)
 }
 
 func (b *Bot) editOrSendMessage(chatID int64, messageID int, text string) {
