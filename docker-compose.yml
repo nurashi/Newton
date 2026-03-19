@@ -1,4 +1,21 @@
 services:
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT}:5432"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   newton-bot:
     build: .
     env_file:
@@ -9,6 +26,12 @@ services:
       - METRICS_PORT=${METRICS_PORT}
       - LOG_LEVEL=${LOG_LEVEL}
       - ENV=${ENV}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
     restart: always
     depends_on:
       postgres:
