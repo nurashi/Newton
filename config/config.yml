@@ -6,8 +6,8 @@ openrouter:
   referer: "https://github.com/nurashi/Newton"
 
 database:
-  host: "postgres"
+  host: "${DB_HOST}"
   port: 5432
-  user: "aiuser"
-  password: "aipassword"
-  name: "aibot"
+  user: "${DB_USER}"
+  password: "${DB_PASSWORD}"
+  name: "${DB_NAME}"

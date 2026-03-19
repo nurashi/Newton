@@ -30,7 +30,8 @@ type PostgreSQL struct {
 type Telegram struct {
 	Token string `mapstructure:"token"`
 }
-// platonus 
+
+// platonus
 var App Config
 
 func Load(path string) *Config {
@@ -45,10 +46,13 @@ func Load(path string) *Config {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	viper.BindEnv("telegram.token", "TELEGRAM_BOT_TOKEN")
+	viper.BindEnv("database.host", "DB_HOST")
+	viper.BindEnv("database.port", "DB_PORT")
 	viper.BindEnv("database.user", "DB_USER")
 	viper.BindEnv("database.password", "DB_PASSWORD")
-	viper.BindEnv("openrouter.model", "OPENROUTER_API_KEY") 
-	
+	viper.BindEnv("database.name", "DB_NAME")
+	viper.BindEnv("openrouter.model", "OPENROUTER_API_KEY")
+
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatalf("Config load error: %v", err)
 	}
@@ -58,7 +62,6 @@ func Load(path string) *Config {
 	}
 	return &App
 }
-
 
 func (c *Config) Validate() {
 	if c.Telegram.Token == "" {
