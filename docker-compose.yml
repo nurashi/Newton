@@ -16,9 +16,6 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
     restart: always
-    depends_on:
-      postgres:
-        condition: service_healthy
     ports:
       - "${METRICS_PORT}:${METRICS_PORT}"
     labels: 
@@ -75,7 +72,6 @@ services:
       - loki
       
 volumes:
-  postgres_data:
   grafana_data:
   prometheus_data: 
   loki_data:
